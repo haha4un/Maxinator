@@ -1,0 +1,1 @@
+"""Maxinator bot package."""

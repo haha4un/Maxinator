@@ -1,0 +1,16 @@
+[project]
+name = "maxinator"
+version = "0.1.0"
+description = "MAX bot scaffold for test flow"
+requires-python = ">=3.10"
+dependencies = [
+    "maxapi>=1.2.1",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+maxinator = "maxinator_bot.main:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
