@@ -1,16 +1,31 @@
 [project]
 name = "maxinator"
 version = "0.1.0"
-description = "MAX bot scaffold for test flow"
+description = "MAX bot for assigning and completing questionnaires"
 requires-python = ">=3.10"
 dependencies = [
+    "alembic>=1.13",
+    "asyncpg>=0.29",
     "maxapi>=1.2.1",
+    "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "SQLAlchemy>=2.0",
+    "testcontainers[postgres]>=4.0",
 ]
 
 [project.scripts]
 maxinator = "maxinator_bot.main:main"
+maxinator-seed = "maxinator_bot.app.seed.questionnaire_seed:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.setuptools.package-data]
+"maxinator_bot.app.database.migrations" = ["README", "script.py.mako"]
