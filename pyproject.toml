@@ -6,6 +6,7 @@ requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.13",
     "asyncpg>=0.29",
+    "fastapi>=0.115",
     "maxapi>=1.2.1",
     "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
@@ -13,11 +14,13 @@ dependencies = [
     "pytest-asyncio>=0.23",
     "SQLAlchemy>=2.0",
     "testcontainers[postgres]>=4.0",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.scripts]
 maxinator = "maxinator_bot.main:main"
 maxinator-seed = "maxinator_bot.app.seed.questionnaire_seed:main"
+maxinator-editor = "maxinator_bot.web.main:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -29,3 +32,4 @@ testpaths = ["tests"]
 
 [tool.setuptools.package-data]
 "maxinator_bot.app.database.migrations" = ["README", "script.py.mako"]
+"maxinator_bot.web" = ["static/*.html", "static/*.css", "static/*.js"]

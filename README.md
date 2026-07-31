@@ -30,7 +30,7 @@ src/maxinator_bot/
       repositories/   # запросы к PostgreSQL
       migrations/     # Alembic
       base.py
-      session.py
+      session.py    
     domain/
       enums/
       models/         # DTO
@@ -72,7 +72,7 @@ cp .env.example .env
 
 ```dotenv
 MAX_BOT_TOKEN=
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/max_questionnaire
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/max_questionnaire
 ADMIN_MAX_IDS=123456789,987654321
 
 PATIENT_CODE_LENGTH=6
@@ -198,6 +198,30 @@ maxinator
 
 Точка входа создаёт `Bot`, `Dispatcher`, контейнер сервисов и запускает
 long polling через фактический API `maxapi 1.2.1`.
+
+## Web-редактор опросников
+
+После применения миграций и запуска PostgreSQL:
+
+```bash
+maxinator-editor
+```
+
+Редактор откроется на `http://127.0.0.1:8080`. Он позволяет:
+
+- создавать черновики опросников;
+- добавлять произвольное количество групп и вопросов;
+- настраивать прямой, обратный и нулевой расчёт, а также вес вопроса;
+- задавать диапазоны интерпретаций и отметку «требует внимания»;
+- настраивать контрольные баллы для ответов 1–5;
+- импортировать и экспортировать опросник как JSON;
+- публиковать опросник переключателем «Опубликован».
+
+Данные сохраняются в нормализованных таблицах PostgreSQL, JSON используется
+как формат API и импорта/экспорта. Версия, по которой уже есть назначения,
+становится неизменяемой. Для продолжения редактирования её нужно клонировать.
+
+Swagger-схема API доступна на `http://127.0.0.1:8080/docs`.
 
 ## Тесты
 

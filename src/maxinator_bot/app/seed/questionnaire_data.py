@@ -9,7 +9,7 @@ from maxinator_bot.app.domain.enums import ScoringDirection
 QUESTIONNAIRE_CODE = "psychological_profile_v1"
 QUESTIONNAIRE_TITLE = "Психологический опросник"
 QUESTIONNAIRE_VERSION = 1
-QUESTIONNAIRE_IS_ACTIVE = False
+QUESTIONNAIRE_IS_ACTIVE = True
 
 
 @dataclass(frozen=True, slots=True)

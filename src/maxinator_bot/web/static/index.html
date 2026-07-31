@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maxinator — редактор опросников</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">MAXINATOR</p>
+      <h1>Редактор опросников</h1>
+    </div>
+    <div class="top-actions">
+      <button class="button ghost" id="importButton">Импорт JSON</button>
+      <button class="button ghost" id="exportButton">Экспорт JSON</button>
+      <button class="button primary" id="saveButton">Сохранить</button>
+      <input id="importInput" type="file" accept="application/json" hidden>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="survey-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ОПРОСНИКИ</p>
+          <h2>Проекты</h2>
+        </div>
+        <button class="icon-button" id="newSurveyButton" title="Новый опросник">+</button>
+      </div>
+      <div id="surveyList" class="survey-list"></div>
+    </aside>
+
+    <section class="editor">
+      <div class="meta-card">
+        <div class="field grow">
+          <label for="title">Название</label>
+          <input id="title" placeholder="Например, Психологический профиль">
+        </div>
+        <div class="field">
+          <label for="code">Код</label>
+          <input id="code" placeholder="psychological_profile">
+        </div>
+        <div class="field small">
+          <label for="version">Версия</label>
+          <input id="version" type="number" min="1" value="1">
+        </div>
+        <label class="publish-toggle">
+          <input id="isActive" type="checkbox">
+          <span>Опубликован</span>
+        </label>
+        <div class="field full">
+          <label for="description">Описание</label>
+          <textarea id="description" rows="2" placeholder="Для кого и для чего этот опросник"></textarea>
+        </div>
+        <div id="lockedNotice" class="locked-notice hidden">
+          Эта версия уже использовалась. Редактирование заблокировано.
+          <button class="link-button" id="cloneButton">Клонировать в новую версию</button>
+        </div>
+      </div>
+
+      <div class="editor-grid">
+        <section class="questions-column">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">СОДЕРЖАНИЕ</p>
+              <h2>Вопросы <span id="questionCount" class="count">0</span></h2>
+            </div>
+            <button class="button secondary" id="addQuestionButton">+ Вопрос</button>
+          </div>
+          <div id="questionList" class="question-list"></div>
+          <div id="emptyQuestions" class="empty-state">
+            Создайте группу справа, затем добавьте первый вопрос.
+          </div>
+        </section>
+
+        <aside class="groups-column">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">СТРУКТУРА</p>
+              <h2>Группы <span id="groupCount" class="count">0</span></h2>
+            </div>
+            <button class="button secondary" id="addGroupButton">+ Группа</button>
+          </div>
+          <div id="groupList" class="group-list"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-heading">
+        <h2 id="modalTitle">Вопрос</h2>
+        <button class="icon-button subtle" id="closeModalButton">×</button>
+      </div>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="button ghost danger" id="deleteModalButton">Удалить</button>
+        <span class="spacer"></span>
+        <button class="button ghost" id="cancelModalButton">Отмена</button>
+        <button class="button primary" id="applyModalButton">Применить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
