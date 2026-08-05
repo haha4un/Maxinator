@@ -4,6 +4,7 @@ import logging
 from uuid import UUID
 
 from maxapi import Dispatcher, F
+from maxapi.filters.command import Command
 from maxapi.types import MessageCallback, MessageCreated
 
 from maxinator_bot.app.bot.callbacks import (
@@ -16,6 +17,7 @@ from maxinator_bot.app.bot.handlers.utils import (
     get_message_text,
 )
 from maxinator_bot.app.bot.keyboards import (
+    build_admin_menu_keyboard,
     build_answer_keyboard,
     build_patient_menu_keyboard,
 )
@@ -38,6 +40,29 @@ def register_patient_handlers(
     dispatcher: Dispatcher,
     services: ServiceContainer,
 ) -> None:
+    @dispatcher.message_created(Command("test"))
+    async def handle_test_command(event: MessageCreated, args: list[str]) -> None:
+        max_user_id = get_max_user_id(event)
+        if max_user_id is None or not args:
+            await event.send("Использование: /test КОД")
+            return
+
+        try:
+            progress = await services.attempts.start_or_resume(
+                args[0],
+                max_user_id,
+            )
+        except (AssignmentAccessDeniedError, EmptyQuestionnaireError):
+            await event.send(ACCESS_DENIED_MESSAGE)
+            return
+
+        await event.send(
+            format_question(progress),
+            attachments=[
+                build_answer_keyboard(progress.attempt_question_id),
+            ],
+        )
+
     @dispatcher.message_callback(
         F.callback.payload == PATIENT_START_TEST,
     )
@@ -91,15 +116,21 @@ def register_patient_handlers(
                     await services.notifications.notify_attempt(
                         outcome.attempt_id,
                         callback.bot,
+                        exclude_max_user_id=max_user_id,
                     )
                 except Exception:
                     logger.exception(
                         "Failed to notify admins for attempt %s",
                         outcome.attempt_id,
                     )
+            if services.admin.is_admin(max_user_id):
+                await services.bot_sessions.show_admin_menu(max_user_id)
+                completion_keyboard = build_admin_menu_keyboard()
+            else:
+                completion_keyboard = build_patient_menu_keyboard()
             await callback.answer(
-                new_text="Тестирование завершено. Спасибо за ответы.",
-                attachments=[build_patient_menu_keyboard()],
+                new_text="Спасибо за тестирование.",
+                attachments=[completion_keyboard],
             )
             return
 

@@ -21,6 +21,7 @@ dependencies = [
 maxinator = "maxinator_bot.main:main"
 maxinator-seed = "maxinator_bot.app.seed.questionnaire_seed:main"
 maxinator-editor = "maxinator_bot.web.main:main"
+maxinator-export-csv = "maxinator_bot.app.export.questionnaire_csv:main"
 
 [build-system]
 requires = ["setuptools>=68"]

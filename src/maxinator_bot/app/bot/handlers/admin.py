@@ -7,6 +7,7 @@ from maxapi.types import MessageCallback, MessageCreated
 
 from maxinator_bot.app.bot.callbacks import (
     ADMIN_ASSIGN,
+    ADMIN_START_TEST,
     ADMIN_BACK,
     ADMIN_ENTER_PATIENT_CODE,
     ADMIN_NEW_PATIENT,
@@ -23,6 +24,7 @@ from maxinator_bot.app.bot.formatters import (
     format_patient_created,
     format_patient_selection,
     format_attempt_result,
+    format_question,
 )
 from maxinator_bot.app.bot.handlers.utils import (
     get_max_user_id,
@@ -34,6 +36,7 @@ from maxinator_bot.app.bot.keyboards import (
     build_questionnaire_selection_keyboard,
     build_result_back_keyboard,
     build_results_keyboard,
+    build_answer_keyboard,
 )
 from maxinator_bot.app.bot.keyboards.admin import build_admin_back_keyboard
 from maxinator_bot.app.domain.enums import BotState
@@ -41,6 +44,7 @@ from maxinator_bot.app.services import ServiceContainer
 from maxinator_bot.app.services.assignment_service import (
     AssignmentNotAvailableError,
 )
+from maxinator_bot.app.services.attempt_service import EmptyQuestionnaireError
 
 
 def register_admin_handlers(
@@ -64,6 +68,10 @@ def register_admin_handlers(
             await _create_patient(callback, max_user_id, services)
         elif payload == ADMIN_ASSIGN:
             await _show_patients(callback, max_user_id, services, page=0)
+        elif payload == ADMIN_START_TEST:
+            await _show_patients(
+                callback, max_user_id, services, page=0, start_immediately=True,
+            )
         elif payload.startswith(ADMIN_PATIENT_PAGE_PREFIX):
             page = _parse_page(payload)
             await _show_patients(
@@ -73,7 +81,14 @@ def register_admin_handlers(
                 page=page,
             )
         elif payload == ADMIN_ENTER_PATIENT_CODE:
-            await services.bot_sessions.enter_patient_code(max_user_id)
+            session = await services.bot_sessions.get(max_user_id)
+            await services.bot_sessions.enter_patient_code(
+                max_user_id,
+                start_immediately=bool(
+                    session.context
+                    and session.context.get("start_immediately")
+                ),
+            )
             await callback.answer(
                 new_text="Введите шестизначный код пациента.",
                 attachments=[build_admin_back_keyboard()],
@@ -177,6 +192,10 @@ async def handle_admin_message(
     await services.bot_sessions.choose_questionnaire(
         max_user_id,
         patient.id,
+        start_immediately=bool(
+            bot_session.context
+            and bot_session.context.get("start_immediately")
+        ),
     )
     questionnaires = (
         await services.assignments.list_active_questionnaires()
@@ -225,11 +244,18 @@ async def _show_patients(
     services: ServiceContainer,
     *,
     page: int,
+    start_immediately: bool | None = None,
 ) -> None:
+    if start_immediately is None:
+        session = await services.bot_sessions.get(max_user_id)
+        start_immediately = bool(
+            session.context and session.context.get("start_immediately")
+        )
     patients = await services.patients.list_active(page, page_size=10)
     await services.bot_sessions.choose_patient(
         max_user_id,
         page=patients.page,
+        start_immediately=start_immediately,
     )
     await callback.answer(
         new_text=format_patient_selection(patients),
@@ -243,6 +269,7 @@ async def _select_patient(
     services: ServiceContainer,
     payload: str,
 ) -> None:
+    bot_session = await services.bot_sessions.get(max_user_id)
     patient_id = _parse_uuid(payload.removeprefix(ADMIN_PATIENT_PREFIX))
     if patient_id is None:
         await callback.ack("Некорректный пациент")
@@ -256,6 +283,10 @@ async def _select_patient(
     await services.bot_sessions.choose_questionnaire(
         max_user_id,
         patient.id,
+        start_immediately=bool(
+            bot_session.context
+            and bot_session.context.get("start_immediately")
+        ),
     )
     questionnaires = await services.assignments.list_active_questionnaires()
     await callback.answer(
@@ -294,6 +325,20 @@ async def _create_assignment(
         )
     except AssignmentNotAvailableError:
         await callback.ack("Пациент или опросник недоступен")
+        return
+
+    if bot_session.context and bot_session.context.get("start_immediately"):
+        try:
+            progress = await services.attempts.start_or_resume(
+                assignment.access_code, max_user_id,
+            )
+        except EmptyQuestionnaireError:
+            await callback.ack("В опроснике нет вопросов")
+            return
+        await callback.answer(
+            new_text=format_question(progress),
+            attachments=[build_answer_keyboard(progress.attempt_question_id)],
+        )
         return
 
     await services.bot_sessions.show_admin_menu(max_user_id)

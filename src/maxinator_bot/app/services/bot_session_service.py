@@ -49,6 +49,7 @@ class BotSessionService:
         max_user_id: str,
         *,
         page: int = 0,
+        start_immediately: bool = False,
     ) -> BotSession:
         return await self._update(
             max_user_id,
@@ -56,17 +57,22 @@ class BotSessionService:
             selected_patient_id=None,
             selected_questionnaire_id=None,
             page=max(0, page),
-            context=None,
+            context={"start_immediately": True} if start_immediately else None,
         )
 
-    async def enter_patient_code(self, max_user_id: str) -> BotSession:
+    async def enter_patient_code(
+        self,
+        max_user_id: str,
+        *,
+        start_immediately: bool = False,
+    ) -> BotSession:
         return await self._update(
             max_user_id,
             state=BotState.ENTERING_PATIENT_CODE,
             selected_patient_id=None,
             selected_questionnaire_id=None,
             page=None,
-            context=None,
+            context={"start_immediately": True} if start_immediately else None,
         )
 
     async def enter_assignment_code(self, max_user_id: str) -> BotSession:
@@ -84,6 +90,8 @@ class BotSessionService:
         self,
         max_user_id: str,
         patient_id: UUID,
+        *,
+        start_immediately: bool = False,
     ) -> BotSession:
         return await self._update(
             max_user_id,
@@ -91,7 +99,7 @@ class BotSessionService:
             selected_patient_id=patient_id,
             selected_questionnaire_id=None,
             page=None,
-            context=None,
+            context={"start_immediately": True} if start_immediately else None,
         )
 
     async def view_results(self, max_user_id: str) -> BotSession:

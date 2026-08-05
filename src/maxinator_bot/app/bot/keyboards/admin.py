@@ -6,6 +6,7 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 
 from maxinator_bot.app.bot.callbacks import (
     ADMIN_ASSIGN,
+    ADMIN_START_TEST,
     ADMIN_BACK,
     ADMIN_ENTER_PATIENT_CODE,
     ADMIN_NEW_PATIENT,
@@ -29,6 +30,7 @@ def build_admin_menu_keyboard() -> AttachmentButton:
     builder = InlineKeyboardBuilder()
     builder.row(callback_button("Новый пациент", ADMIN_NEW_PATIENT))
     builder.row(callback_button("Назначить тестирование", ADMIN_ASSIGN))
+    builder.row(callback_button("Начать тестирование", ADMIN_START_TEST))
     builder.row(callback_button("Результаты", ADMIN_RESULTS))
     return builder.as_markup()
 

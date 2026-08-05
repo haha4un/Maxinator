@@ -1,6 +1,7 @@
 ADMIN_PREFIX = "admin:"
 ADMIN_NEW_PATIENT = "admin:new_patient"
 ADMIN_ASSIGN = "admin:assign"
+ADMIN_START_TEST = "admin:start_test"
 ADMIN_RESULTS = "admin:results"
 ADMIN_RESULTS_SEARCH = "admin:results_search"
 ADMIN_RESULT_PREFIX = "admin:result:"

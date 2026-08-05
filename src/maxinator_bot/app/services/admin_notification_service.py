@@ -19,7 +19,12 @@ class AdminNotificationService:
         self.session_factory = session_factory
         self.admin_max_ids = settings.admin_max_ids
 
-    async def notify_attempt(self, attempt_id: UUID, bot: Bot) -> None:
+    async def notify_attempt(
+        self,
+        attempt_id: UUID,
+        bot: Bot,
+        exclude_max_user_id: str | None = None,
+    ) -> None:
         if not self.admin_max_ids:
             return
 
@@ -45,6 +50,8 @@ class AdminNotificationService:
                     )
                     sent = False
                     for admin_id in self.admin_max_ids:
+                        if admin_id == exclude_max_user_id:
+                            continue
                         if not admin_id.isascii() or not admin_id.isdigit():
                             continue
                         await bot.send_message(
