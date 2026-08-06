@@ -168,9 +168,12 @@ async def _seed(session: AsyncSession) -> SeedSummary:
                 question.category_id = category.id
                 question.text = question_data.text
                 question.weight = question_data.weight
-                question.scoring_direction = (
-                    question_data.scoring_direction
-                )
+                # Preserve scoring configured later through the editor or a
+                # migration when the legacy seed has no direction to offer.
+                if question_data.scoring_direction is not None:
+                    question.scoring_direction = (
+                        question_data.scoring_direction
+                    )
                 question.is_lie_question = question_data.is_lie_question
                 question.is_active = True
             seeded_questions[question_position] = question
