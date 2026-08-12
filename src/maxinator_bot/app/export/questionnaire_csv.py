@@ -53,6 +53,7 @@ EXPORTS: tuple[tuple[str, type[Any], tuple[str, ...]], ...] = (
             "questionnaire_id",
             "category_id",
             "text",
+            "image_url",
             "position",
             "weight",
             "scoring_direction",

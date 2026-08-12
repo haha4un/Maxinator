@@ -143,6 +143,7 @@ function renderQuestions() {
       <div class="drag">⠿</div>
       <div>
         <div class="question-text">${index + 1}. ${escapeHtml(question.text)}</div>
+        ${question.image_url ? '<div class="tags"><span class="tag">Есть картинка</span></div>' : ''}
         <div class="tags">
           <span class="tag group">${escapeHtml(category.name)}</span>
           ${question.is_lie_question
@@ -197,6 +198,7 @@ function openQuestionModal(categoryIndex = 0, questionIndex = null) {
   const isNew = questionIndex === null;
   const source = isNew ? {
     text: "",
+    image_url: null,
     weight: 1,
     scoring_direction: "direct",
     is_lie_question: false,
@@ -211,6 +213,10 @@ function openQuestionModal(categoryIndex = 0, questionIndex = null) {
       <div class="field full">
         <label>Текст вопроса</label>
         <textarea id="qText" rows="4">${escapeHtml(source.text)}</textarea>
+      </div>
+      <div class="field full">
+        <label>Ссылка на картинку в Google Drive</label>
+        <input id="qImageUrl" type="url" value="${escapeHtml(source.image_url || '')}" placeholder="https://drive.google.com/file/d/…/view">
       </div>
       <div class="field">
         <label>Группа</label>
@@ -352,6 +358,7 @@ function applyQuestionModal() {
   }
   const question = {
     text,
+    image_url: $("#qImageUrl").value.trim() || null,
     weight: lie ? 0 : Number($("#qWeight").value),
     scoring_direction: lie ? "none" : $("#qDirection").value,
     is_lie_question: lie,

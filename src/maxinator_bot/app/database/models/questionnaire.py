@@ -175,6 +175,7 @@ class Question(Base):
         index=True,
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    image_url: Mapped[str | None] = mapped_column(Text)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     weight: Mapped[Decimal] = mapped_column(
         Numeric(10, 4),

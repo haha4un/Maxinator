@@ -34,6 +34,7 @@ class QuestionProgress:
     attempt_id: UUID
     attempt_question_id: UUID
     question_text: str
+    image_url: str | None
     current_number: int
     total: int
 

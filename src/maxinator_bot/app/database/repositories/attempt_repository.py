@@ -71,6 +71,7 @@ class AttemptRepository:
                 AttemptQuestion.attempt_id,
                 AttemptQuestion.order_index,
                 Question.text,
+                Question.image_url,
                 total_subquery.label("total"),
             )
             .join(
@@ -95,6 +96,7 @@ class AttemptRepository:
             attempt_id=row.attempt_id,
             attempt_question_id=row.id,
             question_text=row.text,
+            image_url=row.image_url,
             current_number=row.order_index + 1,
             total=row.total,
         )

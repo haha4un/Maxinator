@@ -1,4 +1,4 @@
-"""Copy scoring rules to the legacy identical questionnaire.
+"""Configure questionnaire scoring from the exported questionnaire data.
 
 Revision ID: 20260806_0002
 Revises: 20260725_0001
@@ -17,118 +17,82 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-SOURCE_CODE = "v1"
 TARGET_CODE = "psychological_profile_v1"
+
+# Source: exports/questionnaires/questions.csv (questionnaire code ``v1``).
+# Keeping the data in the migration makes it independent of seed order and of
+# the temporary source questionnaire being present in a particular database.
+DIRECT_POSITIONS = (
+    1, 2, 3, 4, 5, 8, 9, 10,
+    18, 19, 20, 21, 22, 23, 24, 25,
+    28, 29, 30, 31, 32, 33, 34, 35,
+    38, 39, 40, 41, 42, 43, 44, 45,
+    48, 49, 50, 51, 52, 53, 54, 55,
+    58, 59, 60, 61, 62, 63, 64, 65,
+    68, 69, 70, 71, 72, 73, 74, 75,
+    78, 79, 80, 81, 82, 83, 84, 85, 88, 89, 90,
+)
+REVERSE_POSITIONS = (11, 12, 13, 14, 15)
+LIE_POSITIONS = (6, 7, 16, 17, 26, 27, 36, 37, 46, 47, 56, 57, 66, 67, 76, 77, 86, 87)
+LIE_ANSWER_POINTS = ((1, 0), (2, 0), (3, 1), (4, 1), (5, 2))
 
 
 def upgrade() -> None:
     connection = op.get_bind()
-    params = {"source_code": SOURCE_CODE, "target_code": TARGET_CODE}
+    questionnaire_id = connection.execute(
+        sa.text("SELECT id FROM questionnaires WHERE code = :code"),
+        {"code": TARGET_CODE},
+    ).scalar_one_or_none()
 
-    questionnaire_counts = connection.execute(
+    # The questionnaire is application seed data, not schema data. A fresh
+    # Alembic upgrade can therefore legitimately run before it is inserted.
+    if questionnaire_id is None:
+        return
+
+    questions = connection.execute(
         sa.text(
             """
-            SELECT
-                count(*) FILTER (WHERE code = :source_code) AS source_count,
-                count(*) FILTER (WHERE code = :target_code) AS target_count
-            FROM questionnaires
-            WHERE code IN (:source_code, :target_code)
-            """,
-        ),
-        params,
-    ).one()
-    if questionnaire_counts != (1, 1):
-        raise RuntimeError(
-            "Both source and target questionnaires must exist exactly once",
-        )
-
-    question_counts = connection.execute(
-        sa.text(
-            """
-            SELECT
-                count(*) FILTER (WHERE questionnaire_id = source.id),
-                count(*) FILTER (WHERE questionnaire_id = target.id)
+            SELECT position, is_lie_question
             FROM questions
-            CROSS JOIN (
-                SELECT id FROM questionnaires WHERE code = :source_code
-            ) AS source
-            CROSS JOIN (
-                SELECT id FROM questionnaires WHERE code = :target_code
-            ) AS target
-            WHERE questionnaire_id IN (source.id, target.id)
+            WHERE questionnaire_id = :questionnaire_id
             """,
         ),
-        params,
-    ).one()
-    if question_counts[0] == 0 or question_counts[0] != question_counts[1]:
-        raise RuntimeError("Questionnaires do not have matching question counts")
-
-    mismatched_questions = connection.execute(
-        sa.text(
-            """
-            SELECT count(*)
-            FROM questions AS target_question
-            JOIN questionnaires AS target_questionnaire
-              ON target_questionnaire.id = target_question.questionnaire_id
-            LEFT JOIN questions AS source_question
-              ON source_question.position = target_question.position
-             AND source_question.is_lie_question = target_question.is_lie_question
-             AND source_question.questionnaire_id = (
-                 SELECT id FROM questionnaires WHERE code = :source_code
-             )
-            WHERE target_questionnaire.code = :target_code
-              AND source_question.id IS NULL
-            """,
-        ),
-        params,
-    ).scalar_one()
-    if mismatched_questions:
+        {"questionnaire_id": questionnaire_id},
+    ).all()
+    actual = {(row.position, row.is_lie_question) for row in questions}
+    expected = {
+        *((position, False) for position in DIRECT_POSITIONS),
+        *((position, False) for position in REVERSE_POSITIONS),
+        *((position, True) for position in LIE_POSITIONS),
+    }
+    if actual != expected:
         raise RuntimeError(
-            "Questionnaires do not match by question position and type",
+            "Target questionnaire does not match the 90-question export",
         )
-
-    incomplete_source_rules = connection.execute(
-        sa.text(
-            """
-            SELECT count(*)
-            FROM questions AS question
-            JOIN questionnaires AS questionnaire
-              ON questionnaire.id = question.questionnaire_id
-            WHERE questionnaire.code = :source_code
-              AND (
-                  (NOT question.is_lie_question
-                   AND question.scoring_direction IS NULL)
-                  OR
-                  (question.is_lie_question AND 5 != (
-                      SELECT count(*)
-                      FROM lie_question_answer_scores AS rule
-                      WHERE rule.question_id = question.id
-                  ))
-              )
-            """,
-        ),
-        params,
-    ).scalar_one()
-    if incomplete_source_rules:
-        raise RuntimeError("Source questionnaire scoring is not fully configured")
 
     connection.execute(
         sa.text(
             """
-            UPDATE questions AS target_question
-            SET scoring_direction = source_question.scoring_direction,
-                weight = source_question.weight
-            FROM questions AS source_question,
-                 questionnaires AS source_questionnaire,
-                 questionnaires AS target_questionnaire
-            WHERE source_question.questionnaire_id = source_questionnaire.id
-              AND target_question.questionnaire_id = target_questionnaire.id
-              AND source_questionnaire.code = :source_code
-              AND target_questionnaire.code = :target_code
-              AND source_question.position = target_question.position
+            UPDATE questions
+            SET scoring_direction = CASE
+                    WHEN position IN :direct_positions THEN 'direct'
+                    WHEN position IN :reverse_positions THEN 'reverse'
+                    ELSE 'none'
+                END,
+                weight = CASE WHEN position IN :lie_positions THEN 0 ELSE 1 END
+            WHERE questionnaire_id = :questionnaire_id
             """,
+        ).bindparams(
+            sa.bindparam("direct_positions", expanding=True),
+            sa.bindparam("reverse_positions", expanding=True),
+            sa.bindparam("lie_positions", expanding=True),
         ),
-        params,
+        {
+            "questionnaire_id": questionnaire_id,
+            "direct_positions": DIRECT_POSITIONS,
+            "reverse_positions": REVERSE_POSITIONS,
+            "lie_positions": LIE_POSITIONS,
+        },
     )
 
     connection.execute(
@@ -138,26 +102,24 @@ def upgrade() -> None:
                 id, question_id, answer_value, points
             )
             SELECT
-                md5(target_question.id::text || ':' || rule.answer_value)::uuid,
-                target_question.id,
-                rule.answer_value,
-                rule.points
-            FROM lie_question_answer_scores AS rule
-            JOIN questions AS source_question
-              ON source_question.id = rule.question_id
-            JOIN questionnaires AS source_questionnaire
-              ON source_questionnaire.id = source_question.questionnaire_id
-            JOIN questionnaires AS target_questionnaire
-              ON target_questionnaire.code = :target_code
-            JOIN questions AS target_question
-              ON target_question.questionnaire_id = target_questionnaire.id
-             AND target_question.position = source_question.position
-            WHERE source_questionnaire.code = :source_code
+                md5(question.id::text || ':' || score.answer_value)::uuid,
+                question.id,
+                score.answer_value,
+                score.points
+            FROM questions AS question
+            CROSS JOIN (VALUES
+                (1, 0), (2, 0), (3, 1), (4, 1), (5, 2)
+            ) AS score(answer_value, points)
+            WHERE question.questionnaire_id = :questionnaire_id
+              AND question.position IN :lie_positions
             ON CONFLICT (question_id, answer_value)
             DO UPDATE SET points = EXCLUDED.points
             """,
-        ),
-        params,
+        ).bindparams(sa.bindparam("lie_positions", expanding=True)),
+        {
+            "questionnaire_id": questionnaire_id,
+            "lie_positions": LIE_POSITIONS,
+        },
     )
 
 
@@ -168,27 +130,29 @@ def downgrade() -> None:
             """
             DELETE FROM lie_question_answer_scores
             WHERE question_id IN (
-                SELECT questions.id
-                FROM questions
-                JOIN questionnaires
-                  ON questionnaires.id = questions.questionnaire_id
-                WHERE questionnaires.code = :target_code
+                SELECT question.id
+                FROM questions AS question
+                JOIN questionnaires AS questionnaire
+                  ON questionnaire.id = question.questionnaire_id
+                WHERE questionnaire.code = :code
             )
             """,
         ),
-        {"target_code": TARGET_CODE},
+        {"code": TARGET_CODE},
     )
     connection.execute(
         sa.text(
             """
             UPDATE questions
-            SET scoring_direction = NULL,
-                weight = 1
+            SET scoring_direction = CASE
+                    WHEN is_lie_question THEN 'none'
+                    ELSE NULL
+                END,
+                weight = CASE WHEN is_lie_question THEN 0 ELSE 1 END
             WHERE questionnaire_id = (
-                SELECT id FROM questionnaires WHERE code = :target_code
+                SELECT id FROM questionnaires WHERE code = :code
             )
-              AND is_lie_question = false
             """,
         ),
-        {"target_code": TARGET_CODE},
+        {"code": TARGET_CODE},
     )

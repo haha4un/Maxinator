@@ -258,6 +258,7 @@ class QuestionnaireEditorService:
                     questionnaire_id=questionnaire.id,
                     category=category,
                     text=question_data.text,
+                    image_url=question_data.image_url,
                     position=question_position,
                     weight=question_data.weight,
                     scoring_direction=question_data.scoring_direction,
@@ -303,6 +304,7 @@ class QuestionnaireEditorService:
                     questions=[
                         {
                             "text": question.text,
+                            "image_url": question.image_url,
                             "weight": question.weight,
                             "scoring_direction": question.scoring_direction,
                             "is_lie_question": question.is_lie_question,

@@ -36,9 +36,9 @@ from maxinator_bot.app.bot.keyboards import (
     build_questionnaire_selection_keyboard,
     build_result_back_keyboard,
     build_results_keyboard,
-    build_answer_keyboard,
 )
 from maxinator_bot.app.bot.keyboards.admin import build_admin_back_keyboard
+from maxinator_bot.app.bot.question_media import build_question_attachments
 from maxinator_bot.app.domain.enums import BotState
 from maxinator_bot.app.services import ServiceContainer
 from maxinator_bot.app.services.assignment_service import (
@@ -337,7 +337,7 @@ async def _create_assignment(
             return
         await callback.answer(
             new_text=format_question(progress),
-            attachments=[build_answer_keyboard(progress.attempt_question_id)],
+            attachments=await build_question_attachments(progress),
         )
         return
 

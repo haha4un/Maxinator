@@ -8,9 +8,9 @@ from maxinator_bot.app.bot.handlers.utils import get_max_user_id
 from maxinator_bot.app.bot.formatters import format_question
 from maxinator_bot.app.bot.keyboards import (
     build_admin_menu_keyboard,
-    build_answer_keyboard,
     build_patient_menu_keyboard,
 )
+from maxinator_bot.app.bot.question_media import build_question_attachments
 from maxinator_bot.app.domain.enums import BotState
 from maxinator_bot.app.services import ServiceContainer
 
@@ -62,11 +62,7 @@ async def _show_home(
         if progress is not None:
             await event.send(
                 format_question(progress),
-                attachments=[
-                    build_answer_keyboard(
-                        progress.attempt_question_id,
-                    ),
-                ],
+                attachments=await build_question_attachments(progress),
             )
             return
 

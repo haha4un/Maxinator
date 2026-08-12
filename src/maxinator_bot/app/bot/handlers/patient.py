@@ -18,9 +18,9 @@ from maxinator_bot.app.bot.handlers.utils import (
 )
 from maxinator_bot.app.bot.keyboards import (
     build_admin_menu_keyboard,
-    build_answer_keyboard,
     build_patient_menu_keyboard,
 )
+from maxinator_bot.app.bot.question_media import build_question_attachments
 from maxinator_bot.app.domain.enums import BotState
 from maxinator_bot.app.services import ServiceContainer
 from maxinator_bot.app.services.attempt_service import (
@@ -58,9 +58,7 @@ def register_patient_handlers(
 
         await event.send(
             format_question(progress),
-            attachments=[
-                build_answer_keyboard(progress.attempt_question_id),
-            ],
+            attachments=await build_question_attachments(progress),
         )
 
     @dispatcher.message_callback(
@@ -102,11 +100,7 @@ def register_patient_handlers(
         if outcome.next_question is not None:
             await callback.answer(
                 new_text=format_question(outcome.next_question),
-                attachments=[
-                    build_answer_keyboard(
-                        outcome.next_question.attempt_question_id,
-                    ),
-                ],
+                attachments=await build_question_attachments(outcome.next_question),
             )
             return
 
@@ -160,9 +154,7 @@ async def handle_patient_message(
 
     await event.send(
         format_question(progress),
-        attachments=[
-            build_answer_keyboard(progress.attempt_question_id),
-        ],
+        attachments=await build_question_attachments(progress),
     )
     return True
 

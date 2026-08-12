@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from decimal import Decimal
+from urllib.parse import urlparse
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -29,11 +30,26 @@ class InterpretationPayload(BaseModel):
 
 class QuestionPayload(BaseModel):
     text: str = Field(min_length=1)
+    image_url: str | None = Field(default=None, max_length=2048)
     weight: Decimal = Field(default=Decimal("1"), ge=0)
     scoring_direction: ScoringDirection = ScoringDirection.DIRECT
     is_lie_question: bool = False
     is_active: bool = True
     answer_scores: dict[int, int] = Field(default_factory=dict)
+
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value: str | None) -> str | None:
+        if not value or not value.strip():
+            return None
+        value = value.strip()
+        parsed = urlparse(value)
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname not in {"drive.google.com", "docs.google.com"}
+        ):
+            raise ValueError("Картинка должна быть HTTPS-ссылкой на Google Drive")
+        return value
 
     @field_validator("answer_scores")
     @classmethod
@@ -47,6 +63,7 @@ class QuestionPayload(BaseModel):
     @model_validator(mode="after")
     def normalize_lie_question(self) -> QuestionPayload:
         self.text = self.text.strip()
+        self.image_url = self.image_url.strip() if self.image_url else None
         if self.is_lie_question:
             self.weight = Decimal("0")
             self.scoring_direction = ScoringDirection.NONE
